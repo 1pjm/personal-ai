@@ -169,6 +169,14 @@ def config검사(cfg: dict, rep: 보고):
     훑기(cfg, "")
     rep.판정("사람 확인 값", 남은표식, "차단 표식 없음")
 
+    # ★ 를 지우고 예시 이름을 그대로 둔 것도 막는다. 발명자를 잘못 적으면 등록 뒤 무효사유가 된다
+    예시이름 = {"홍길동", "김철수", "이영희", "아무개", "성명", "이름",
+                "홍길순", "김갑돌", "홍길동1", "테스트"}
+    가짜 = [f"inventors[{i}].name = {v.get('name')}"
+            for i, v in enumerate(cfg.get("inventors") or [])
+            if (v.get("name") or "").strip() in 예시이름]
+    rep.판정("발명자 실명", 가짜, "예시 이름 없음")
+
     발명 = cfg.get("invention", {})
     if not 발명.get("title_kr"):
         rep.오류("발명의 명칭", "invention.title_kr 이 비어 있다")
@@ -648,6 +656,45 @@ def docx만들기(폴더: Path, cfg: dict) -> Path:
     return 파일
 
 
+def 제출절차(폴더: Path, cfg: dict, 출원: dict, 공지: dict) -> list[str]:
+    """특허로에서 사람이 눌러야 하는 차례를 이 건의 실제 수치로 적는다.
+
+    관청 제출 자체는 인증서 서명을 수반하는 법률행위라 킷이 대신하지 아니한다.
+    대신 무엇을 몇 개 붙이고 어느 칸에 무엇을 적는지를 틀리지 않게 적어 둔다.
+    """
+    길 = 경로들(폴더, cfg)
+    도면 = 폴더 / "도면"
+    매수 = len({f.stem for f in 도면.glob("*.svg")} | {f.stem for f in 도면.glob("*.png")})         if 도면.is_dir() else 0
+    try:
+        항수 = len(청구항나누기(길["claims"].read_text(encoding="utf-8")))
+    except OSError:
+        항수 = 0
+    docx = f"임시명세서_{dt.date.today().strftime('%Y%m%d')}.docx"
+
+    남 = ""
+    마감 = 출원.get("priority_deadline") or ""
+    try:
+        남 = f" (D-{(dt.date.fromisoformat(마감) - dt.date.today()).days})"
+    except ValueError:
+        pass
+
+    줄 = ["## 제출 차례 — 사람이 한다", "",
+          "관청 제출은 공동인증서로 서명하는 법률행위다. 킷은 여기까지만 만든다.", "",
+          "| # | 할 일 | 값 |", "| --- | --- | --- |",
+          "| 1 | 특허로 patent.go.kr 로그인 · 출원인코드 확인 | 최초 1회만 |",
+          f"| 2 | 통합 명세서 작성기에 넣을 원고 | `_출력/{docx}` |",
+          f"| 3 | 도면 첨부 | {매수}매 |",
+          f"| 4 | 청구항 수 확인 | {항수}항 |",
+          f"| 5 | 출원 종류 | {출원.get('kind', '')} |",
+          f"| 6 | 수수료 감면 체크 | {출원.get('fee_reduction', '') or '해당 없음'} |",
+          f"| 7 | 공지예외 주장 칸 | {'예 · 공개일 ' + (공지.get('date') or '') if 공지.get('claimed') else '아니오'} |",
+          "| 8 | 인증서 서명 · 수수료 결제 · 제출 | 사람이 누른다 |",
+          f"| 9 | 공지예외 증명서류 제출 | 출원일부터 30일 이내 |", ""]
+    if 마감:
+        줄 += [f"○ 우선일 마감 {마감}{남}", ""]
+    return 줄
+
+
 def 출원서요약(폴더: Path, cfg: dict) -> Path:
     """관청 서식에 옮겨 적을 서지사항을 한 장으로 뽑는다."""
     발명 = cfg.get("invention") or {}
@@ -677,6 +724,7 @@ def 출원서요약(폴더: Path, cfg: dict) -> Path:
                   f"{'예' if v.get('is_representative') else ''} |")
     줄 += ["", "○ 공지예외를 주장하는 경우 증명서류를 출원일부터 30일 이내에 제출한다"
            " (특허법 제30조제2항).", ""]
+    줄 += 제출절차(폴더, cfg, 출원, 공지)
     출력 = 경로들(폴더, cfg)["out"]
     출력.mkdir(exist_ok=True)
     파일 = 출력 / "출원서_기재사항.md"

@@ -80,7 +80,7 @@ import patentkit as K
     "invention": {"title_kr": "시험용 자료 처리 장치, 그 방법 및 이를 기록한 컴퓨터 판독가능 기록매체",
                   "title_en": "Test Apparatus"},
     "applicants": [{"name": "시험 주식회사", "biz_no": "123-45-67890", "type": "주출원"}],
-    "inventors": [{"name": "홍길동", "org": "시험 주식회사", "is_representative": True}],
+    "inventors": [{"name": "우무결", "org": "시험 주식회사", "is_representative": True}],
     "ipc": ["G06F 16/22"],
     "filing": {"kind": "임시명세서(가출원)",
                "disclosure_exception": {"claimed": False, "date": "", "medium": ""}},
@@ -176,14 +176,20 @@ def main():
         폴더11 = 출원건만들기(뿌리 / "k", cfg=별표)
         assert "사람 확인 값" in 검사명들(K.출원건처리(폴더11), "오류")
 
+        # ★ 를 지우고 예시 이름을 그대로 둔 것도 잡는다
+        예시 = json.loads(json.dumps(성한config))
+        예시["inventors"][0]["name"] = "홍길동"
+        폴더11b = 출원건만들기(뿌리 / "k2", cfg=예시)
+        assert "발명자 실명" in 검사명들(K.출원건처리(폴더11b), "오류")
+
         번호 = json.loads(json.dumps(성한config))
         번호["applicants"][0]["biz_no"] = "1234567890"
         폴더12 = 출원건만들기(뿌리 / "l", cfg=번호)
         assert "출원인" in 검사명들(K.출원건처리(폴더12), "오류")
 
         지분 = json.loads(json.dumps(성한config))
-        지분["inventors"] = [{"name": "홍길동", "share_pct": 60},
-                             {"name": "김철수", "share_pct": 30}]
+        지분["inventors"] = [{"name": "우무결", "share_pct": 60},
+                             {"name": "남기현", "share_pct": 30}]
         폴더13 = 출원건만들기(뿌리 / "m", cfg=지분)
         assert "발명자 지분" in 검사명들(K.출원건처리(폴더13), "오류")
 
@@ -204,7 +210,7 @@ def main():
         # 14. 출원서 기재사항 한 장
         파일 = K.출원서요약(폴더, 성한config)
         본문 = 파일.read_text(encoding="utf-8")
-        assert "홍길동" in 본문 and "123-45-67890" in 본문
+        assert "우무결" in 본문 and "123-45-67890" in 본문
 
         print("자체 점검 14개 항목 전부 통과")
         return 0
