@@ -1,0 +1,21 @@
+https://github.com/chrisryugj/korean-patent-mcp 
+
+특허는 그냥 이거 그대로 붙여서 화면 만들면 됩니당.
+
+그리고 키워드 추출해서 매일 올라오게 설정만하면됨.
+
+https://gemini.google.com/gem/1jGvB6WpS-TJ3Eq3uZfoj_kR4rs9b_P1f?usp=sharing 
+
+이걸 Gems로 만든건데, 프롬프트랑 내용 공유할테니 이걸 클로드코드에 넣어서 그대로 만들면 됨.
+일단 어떻게 작동하는지 테스트해봐.
+
+특허명세서작성 가이드라인, 야매변리사 md파일 두개 확인해서 만들면 됩니다.
+
+저걸로 임시특허 출원까지 모두 다 가능.
+
+https://chatgpt.com/g/g-69bd5fafa5108191bbda088a7747cc52-hanyangkon-sajja-byeonrisa 
+
+이건 지피티로도 볼 수 있는것임.
+
+https://app.notion.com/p/32a0b5c4c96780cf9fbde8ac8e1c3586?source=copy_link
+이거보면 됩니다.

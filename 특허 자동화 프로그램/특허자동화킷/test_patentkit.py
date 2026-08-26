@@ -182,6 +182,13 @@ def main():
         폴더11b = 출원건만들기(뿌리 / "k2", cfg=예시)
         assert "발명자 실명" in 검사명들(K.출원건처리(폴더11b), "오류")
 
+        # 가이드 6.1 뒷받침 요건 — 청구항에만 있고 설명에 없는 구성요소를 잡는다
+        뒷 = 출원건만들기(뿌리 / "k3")
+        c = (뒷 / "02_청구범위.md")
+        c.write_text(c.read_text(encoding="utf-8").replace(
+            "자료를 받는 수신부를", "어디에도없는판별부와 자료를 받는 수신부를", 1), encoding="utf-8")
+        assert "뒷받침 요건" in 검사명들(K.출원건처리(뒷), "오류")
+
         번호 = json.loads(json.dumps(성한config))
         번호["applicants"][0]["biz_no"] = "1234567890"
         폴더12 = 출원건만들기(뿌리 / "l", cfg=번호)
