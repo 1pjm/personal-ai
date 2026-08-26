@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import sys,docx;print\\(sys.version\\)\")",
+      "Bash(python \"C:/Users/SAMSUNG/OneDrive/바탕 화면/교육/personal-ai/특허 자동화 프로그램/특허자동화킷/gui.py\")",
+      "PowerShell(Get-Process *)",
+      "WebFetch(domain:standardview-local.aramjung13.workers.dev)",
+      "Bash(python \"C:/Users/SAMSUNG/OneDrive/바탕 화면/교육/personal-ai/특허 자동화 프로그램/특허자동화킷/gui.py\" --test)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(python -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\(len\\(d['목록']\\)\\);[print\\(c['이름'],'|',c['제목'][:30],'|도면',c['도면수']\\) for c in d['목록']]\")",
+      "Bash(python -c ' *)",
+      "PowerShell($p = Get-NetTCPConnection -State Listen -LocalAddress 127.0.0.1 -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -in \\(Get-Process python -ErrorAction SilentlyContinue\\).Id }; if \\($p\\) { Start-Process \"http://127.0.0.1:$\\($p[0].LocalPort\\)/\"; \"opened port $\\($p[0].LocalPort\\)\" } else { \"server down\" })",
+      "PowerShell($p = Get-NetTCPConnection -State Listen -LocalAddress 127.0.0.1 -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -in \\(Get-Process python -ErrorAction SilentlyContinue\\).Id }; if \\($p\\) { $u = \"http://127.0.0.1:$\\($p[0].LocalPort\\)/\"; Start-Process $u; $u } else { \"server down\" })",
+      "Skill(update-config)"
+    ]
+  }
+}
