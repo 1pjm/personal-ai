@@ -78,20 +78,43 @@ function 가마당(n) {
 }
 function 다음마당() { 가마당(Math.min(현재 + 1, 마당들.length - 1)); }
 
-/* 아래 요약 띠 — 고른 건과 돈·기한이 늘 보인다 */
+/* 요약 — 넓으면 오른쪽에 서고 좁으면 아래에 붙는다 */
 function 띠() {
-  const c = 건들[고른];
-  if (!c) { $('bar').classList.remove('on'); return; }
+  const c = 건들[고른], e = $('요약');
+  if (!c) { e.hidden = true; 높이재기(); return; }
   const 남 = 날수(c.마감);
-  $('barinfo').innerHTML =
+  $('요약속').innerHTML =
     `<div><dt>고른 특허</dt><dd>${안전(c.이름)}</dd></div>
      <div><dt>낼 돈</dt><dd>${원(c.수수료.실납부)}</dd></div>
      ${c.마감 ? `<div><dt>마감</dt><dd>${안전(c.마감)}${남 !== null ? ` · D-${남}` : ''}</dd></div>` : ''}`;
-  $('barnext').textContent = 현재 >= 마당들.length - 1 ? '' : '';
-  $('barnext').innerHTML = (현재 >= 마당들.length - 1 ? '처음으로' : '다음') + ' ' + 아이콘('next');
-  $('barnext').onclick = () => 가마당(현재 >= 마당들.length - 1 ? 0 : 현재 + 1);
-  $('bar').classList.add('on');
+  const 끝 = 현재 >= 마당들.length - 1;
+  $('요약다음').innerHTML = (끝 ? '처음으로' : '다음') + ' ' + 아이콘('next');
+  $('요약다음').onclick = () => 가마당(끝 ? 0 : 현재 + 1);
+  e.hidden = false;
+  높이재기();
 }
+
+/* 좁은 창에서 아래에 붙을 때, 그 높이만큼 본문 아래를 띄운다.
+   띄우지 아니하면 마지막 줄이 띠에 가린다 */
+function 높이재기() {
+  const e = $('요약'), h = document.querySelector('header');
+  document.documentElement.style.setProperty('--hdh', (h.offsetHeight + 16) + 'px');
+  document.documentElement.style.setProperty('--sidh',
+    (e.hidden ? 40 : e.offsetHeight + 24) + 'px');
+}
+addEventListener('resize', 높이재기);
+
+function 요약접기() {
+  const e = $('요약'), 접힘 = e.classList.toggle('접힘');
+  $('접기').setAttribute('aria-expanded', String(!접힘));
+  $('접기').querySelector('.ㄱ').textContent = 접힘 ? '보이기' : '숨기기';
+  try { localStorage.setItem('요약접힘', 접힘 ? '1' : ''); } catch (e) { }
+  높이재기();
+}
+try {
+  if (localStorage.getItem('요약접힘')) 요약접기();
+} catch (e) { }
+
 function 날수(iso) {
   if (!iso) return null;
   const d = new Date(iso + 'T00:00:00');
@@ -102,6 +125,8 @@ function 날수(iso) {
 /* ── 0. 어느 특허를 낼까요 ─────────────────────────── */
 function 그리기0(r) {
   보드 = r.보드 !== undefined ? (r.보드 || '') : 보드;
+  const 길 = $('보드길');
+  if (보드) { 길.href = 보드; 길.hidden = false; } else 길.hidden = true;
   if (r.열쇠 !== undefined) 열쇠있음 = r.열쇠;
   건들 = r.건들 || []; 고른 = null;
   const 최근 = (r.최근 || []).filter(x => x !== r.폴더);
@@ -210,9 +235,12 @@ async function 검사하기() {
          <span id="fm" style="color:var(--go);font-weight:600"></span></div>`;
   }
   if (보드) {
-    h += `<p class="hint" style="margin-top:20px">원고 자체를 고쳐야 한다면
-      <a href="${보드}" target="_blank" rel="noopener">특허킷 메인보드 ${아이콘('out')}</a>
-      에서 청구항·단락번호·선행기술까지 자세히 다룰 수 있습니다.</p>`;
+    h += `<div class="note warn" style="margin-top:20px">${아이콘('board')}<div>
+      <b>더 자세히 손보려면</b>
+      <p>청구항 대비, 단락번호 다시 매기기, 선행기술 조사까지 다루는
+      전문가용 화면이 따로 있습니다. 표제 오른쪽에서도 언제든 열 수 있습니다.</p>
+      <a class="btn sm" href="${보드}" target="_blank" rel="noopener"
+        style="margin-top:8px">특허킷 메인보드 열기 ${아이콘('out')}</a></div></div>`;
   }
   h += 다음단추(3, '서류 만들기로');
   마당(2, r.성함 ? 'done' : 'stop', r.성함 ? '지났습니다' : `${r.오류.length}가지 고쳐야 함`);

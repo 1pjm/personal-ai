@@ -54,15 +54,27 @@ def main() -> int:
     # getElementById 가 헤더의 단추를 먼저 집어 결과를 거기다 그렸고, 화면이 겹쳐 보였다.
     # 「찍어 내는 id」 와 「박아 둔 id」 가 같은 자리를 가리키면 잡는다.
     자리 = Path(__file__).resolve().parent
-    글 = ((자리 / "화면.js").read_text(encoding="utf-8")
-         + (자리 / "화면.html").read_text(encoding="utf-8"))
+    js = (자리 / "화면.js").read_text(encoding="utf-8")
+    html = (자리 / "화면.html").read_text(encoding="utf-8")
+    글 = js + html
     찍는앞 = set(re.findall(r'id="([A-Za-z_]+)\$\{', 글))       # id="b${n}" → b
     박은것 = set(re.findall(r'id="([^"$]+)"', 글))                # id="r3"    → r3
     겹침 = sorted(f for f in 박은것 for a in 찍는앞
                  if f.startswith(a) and f[len(a):].isdigit())
     assert not 겹침, f"id 가 겹친다 — 찍는 앞머리 {sorted(찍는앞)} 와 박은 id {겹침}"
 
-    print(f"자체 점검 통과 — 감면율 6가지 · 수수료 4가지 · 사전등록 2가지 · 화면 id 겹침 없음")
+    # 아래에 붙는 요약이 본문 마지막 줄을 가리지 아니하는가.
+    # CSS 는 main 의 아래 여백을 --sidh 로 잡고, JS 가 그 값을 띠 높이로 채운다.
+    # 한쪽 이름만 고치면 여백이 0 이 되어 글이 가린다.
+    for 변수 in ("--sidh", "--hdh"):
+        assert f"var({변수}" in html, f"CSS 가 {변수} 를 쓰지 아니한다"
+        assert f"'{변수}'" in js, f"JS 가 {변수} 를 채우지 아니한다"
+    assert "addEventListener('resize', 높이재기)" in js, "창 크기가 바뀔 때 다시 재지 아니한다"
+
+    # 표제의 메인보드 단추가 살아 있는가
+    assert 'id="보드길"' in html and "보드길" in js, "메인보드로 가는 길이 없다"
+
+    print(f"자체 점검 통과 — 감면율 6가지 · 수수료 4가지 · 사전등록 2가지 · 화면 id 겹침 없음 · 요약 여백·메인보드 길")
     return 0
 
 
