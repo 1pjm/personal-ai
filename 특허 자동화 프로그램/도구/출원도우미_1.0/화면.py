@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -27,6 +28,36 @@ import 출원도우미 as D
 
 뿌리 = Path(".").resolve()
 보드주소 = ""          # 특허킷 2.7.0 메인보드. 띄우면 채워진다
+보드꾼 = None          # 그 프로세스. 폴더가 바뀌면 다시 띄운다
+적바림 = Path.home() / ".patentkit-helper.json"   # ASCII 이름. 한글은 탈이 잦다
+
+
+def 최근읽기() -> list[str]:
+    try:
+        낸 = json.loads(적바림.read_text(encoding="utf-8")).get("최근") or []
+    except Exception:
+        return []
+    return [x for x in 낸 if Path(x).is_dir()][:8]
+
+
+def 최근적기(폴더: Path) -> None:
+    낸 = [str(폴더)] + [x for x in 최근읽기() if x != str(폴더)]
+    try:
+        적바림.write_text(json.dumps({"최근": 낸[:8]}, ensure_ascii=False, indent=2),
+                        encoding="utf-8")
+    except OSError:
+        pass
+
+
+def 폴더고르기(처음: str) -> str:
+    """따로 프로세스를 띄운다. 서버 갈래에서 Tk 를 바로 쓰면 흔들린다."""
+    코드 = ("import tkinter as tk;from tkinter import filedialog;"
+            "r=tk.Tk();r.withdraw();r.attributes('-topmost',True);"
+            f"print(filedialog.askdirectory(initialdir={처음!r}) or '')")
+    환경 = {**os.environ, "PYTHONIOENCODING": "utf-8"}   # 한글 경로가 깨지는 것을 막는다
+    r = subprocess.run([sys.executable, "-c", 코드], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace", env=환경)
+    return (r.stdout or "").strip()
 
 
 # ─────────────────────────────────────────────── 자료 모으기
@@ -211,6 +242,14 @@ pre{background:var(--paper);border:1px solid var(--rule2);padding:11px;overflow-
   <details class="step" id="s0" open><summary><span class="no">0</span>어느 특허를 낼까요<span class="tag" id="t0">고르세요</span></summary>
     <div class="body">
       <p class="hint">특허 하나가 폴더 하나입니다. 낼 것을 고르세요.</p>
+      <div class="row" style="margin-bottom:12px">
+        <input type="text" id="dir" placeholder="원고가 든 폴더" aria-label="원고 폴더 경로"
+          style="flex:1;min-width:230px;font:14px var(--mono);padding:8px 10px;
+            border:1px solid var(--rule);background:var(--paper);color:var(--ink)">
+        <button onclick="찾기()">찾아보기</button>
+        <button class="p" onclick="불러오기()">불러오기</button>
+      </div>
+      <div id="recent" class="row" style="margin-bottom:12px"></div>
       <div class="cases" id="cases"><div class="empty"><span class="spin"></span>찾는 중</div></div>
     </div></details>
 
@@ -254,23 +293,46 @@ function 마당(n,상태,꼬리){
   $('t'+n).textContent=꼬리;
 }
 
-(async()=>{
-  const r=await api('/api/start');
-  보드=r.보드||''; $('ver').textContent='출원 도우미 '+r.버전;
-  건들=r.건들;
+function 그리기0(r){
+  보드 = r.보드!==undefined ? (r.보드||'') : 보드;
+  if(r.폴더) $('dir').value=r.폴더;
+  건들 = r.건들||[];
+  고른 = null;
+  $('recent').innerHTML = (r.최근||[]).filter(x=>x!==r.폴더).map(x=>
+    `<button class="copy" title="${안전(x)}" onclick="가기(this.title)">${안전(x.split(/[\/]/).pop())}</button>`
+  ).join('') || '';
   $('cases').innerHTML = 건들.length ? 건들.map((c,i)=>`
     <button class="case" id="c${i}" onclick="고르기(${i})">
       <b>${안전(c.이름)}</b>
       <small>${안전(c.제목).slice(0,44)}…</small>
       <small>청구항 ${c.청구항}항 · 도면 ${c.도면}매${c.마감?' · 마감 '+c.마감:''}</small>
     </button>`).join('')
-    : '<div class="empty">이 폴더에 특허 원고가 없습니다.<br>patent_config.json 이 있는 폴더에서 실행하세요.</div>';
+    : `<div class="empty">${안전(r.잘못||'이 폴더에 특허 원고가 없습니다.')}<br>
+       patent_config.json 이 들어 있는 폴더를 고르세요. 몇 단계 아래에 있어도 찾습니다.</div>`;
+  ['1','2','3','4','5','6'].forEach(n=>{$('s'+n).open=false; 마당(n,'','—'); $('b'+n).innerHTML='';});
+  마당(0, 건들.length?'':'stop', 건들.length? 건들.length+'건 찾음' : '고르세요');
   if(건들.length===1) 고르기(0);
+}
+
+async function 찾기(){
+  const r=await api('/api/pick?dir='+encodeURIComponent($('dir').value));
+  if(r.폴더){ $('dir').value=r.폴더; 불러오기(); }
+}
+async function 가기(폴더){ $('dir').value=폴더; 불러오기(); }
+async function 불러오기(){
+  $('cases').innerHTML='<div class="empty"><span class="spin"></span>찾는 중</div>';
+  그리기0(await api('/api/chdir',{폴더:$('dir').value}));
+}
+
+(async()=>{
+  const r=await api('/api/start');
+  $('ver').textContent='출원 도우미 '+r.버전;
+  그리기0(r);
 })();
 
 function 고르기(i){
   고른=i; 건들.forEach((_,j)=>$('c'+j).classList.toggle('on',i===j));
-  마당(0,'done',건들[i].이름);
+  마당(0,'done',건들[i].이름+' ('+건들.length+'건 중)');
   ['1','2','3','4','5','6'].forEach(n=>$('s'+n).open=false);
   그리기1(); 그리기3(); 그리기4(); 그리기5(); 그리기6();
   $('s1').open=true; 보이게($('s1'));
@@ -448,7 +510,10 @@ class 처리기(BaseHTTPRequestHandler):
             return self.보냄(화면, "text/html")
         if 길.path == "/api/start":
             return self.보냄({"버전": D.버전, "보드": 보드주소,
+                            "폴더": str(뿌리), "최근": 최근읽기(),
                             "건들": [한건(g) for g in 출원건들()]})
+        if 길.path == "/api/pick":
+            return self.보냄({"폴더": 폴더고르기(물.get("dir", [str(뿌리)])[0])})
         if 길.path == "/api/check":
             건 = 출원건들()[int(물.get("i", ["0"])[0])]
             r = 검사(건)
@@ -458,8 +523,10 @@ class 처리기(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
+        global 뿌리
         몸 = json.loads(self.rfile.read(int(self.headers["Content-Length"] or 0)) or b"{}")
-        건 = 출원건들()[int(몸.get("i", 0))]
+        건들 = 출원건들()
+        건 = 건들[int(몸.get("i", 0))] if 건들 else 뿌리
         if self.path == "/api/build":
             줄 = []
             성함 = True
@@ -475,6 +542,17 @@ class 처리기(BaseHTTPRequestHandler):
                     break
             D.준비(건, False)
             return self.보냄({"성함": 성함, "줄": 줄, "건": 한건(건)})
+        if self.path == "/api/chdir":
+            새 = Path(몸.get("폴더", "")).expanduser()
+            if not 새.is_dir():
+                return self.보냄({"잘못": "그런 폴더가 없습니다", "건들": []})
+            뿌리 = 새.resolve()
+            건들 = 출원건들()
+            if 건들:
+                최근적기(뿌리)
+                threading.Thread(target=보드띄우기, args=(뿌리,), daemon=True).start()
+            return self.보냄({"폴더": str(뿌리), "최근": 최근읽기(),
+                            "건들": [한건(g) for g in 건들]})
         if self.path == "/api/fill":
             f = 건 / "patent_config.json"
             cfg = json.loads(f.read_text(encoding="utf-8"))
@@ -503,9 +581,12 @@ class 처리기(BaseHTTPRequestHandler):
 
 def 보드띄우기(폴더: Path) -> None:
     """특허킷 2.7.0 메인보드를 뒤에서 띄우고 그 주소를 받아 둔다."""
-    global 보드주소
+    global 보드주소, 보드꾼
+    보드주소 = ""
+    if 보드꾼 and 보드꾼.poll() is None:
+        보드꾼.terminate()
     try:
-        p = subprocess.Popen([sys.executable, "-m", "patentkit", "web", str(폴더),
+        p = 보드꾼 = subprocess.Popen([sys.executable, "-m", "patentkit", "web", str(폴더),
                               "--no-open"], stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT, text=True,
                              encoding="utf-8", errors="replace")
@@ -524,6 +605,8 @@ def 보드띄우기(폴더: Path) -> None:
 def main() -> int:
     global 뿌리
     뿌리 = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
+    if 출원건들():
+        최근적기(뿌리)
     threading.Thread(target=보드띄우기, args=(뿌리,), daemon=True).start()
     서버 = ThreadingHTTPServer(("127.0.0.1", 0), 처리기)
     주소 = f"http://127.0.0.1:{서버.server_address[1]}/"
