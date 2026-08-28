@@ -273,10 +273,13 @@ class 처리기(BaseHTTPRequestHandler):
             for 이름, 인자 in (("제출본", "build"), ("도면", "figures"),
                              ("검사", "validate"), ("서식(DOCX)", "docx")):
                 코드, 글 = D.킷(인자, str(건))
-                줄.append({"ok": 코드 == 0, "글": f"{이름} — " +
-                          ("만들었습니다" if 코드 == 0 else
-                           next((l.strip() for l in 글.splitlines() if "[오류]" in l),
-                                "막혔습니다"))})
+                if 코드 == 0:
+                    줄.append({"ok": True, "글": f"{이름} — 만들었습니다"})
+                else:
+                    첫 = next((l.strip() for l in 글.splitlines() if "[오류]" in l), "")
+                    풀 = 풀이(첫) if 첫 else {"뜻": "만들지 못했습니다", "방법": "", "원문": ""}
+                    줄.append({"ok": False, "글": f"{이름} — {풀['뜻']}",
+                               "방법": 풀["방법"], "원문": 풀["원문"]})
                 if 코드 != 0 and 인자 == "validate":
                     성함 = False
                     break

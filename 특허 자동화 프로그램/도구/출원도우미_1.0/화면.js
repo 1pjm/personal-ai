@@ -31,7 +31,7 @@ $('steps').innerHTML = 마당들.map(([이름, 풀이], n) => `
   </details>`).join('');
 
 $('rail').innerHTML = 마당들.map(([이름], n) =>
-  `<button id="r${n}" onclick="가마당(${n})">
+  `<button id="nav_${n}" onclick="가마당(${n})">
      <span class="n">${n}</span>${안전(이름)}</button>`).join('');
 
 /* ── 오감 ─────────────────────────────────────────── */
@@ -54,7 +54,7 @@ function 다음단추(n, 글) {
 
 /* 마당 상태를 한 곳에서 바꾼다. 레일·알약·동그라미가 함께 움직인다 */
 function 마당(n, 상태, 꼬리) {
-  const e = $('s' + n), r = $('r' + n);
+  const e = $('s' + n), r = $('nav_' + n);
   if (상태) { e.dataset.s = 상태; r.dataset.s = 상태; }
   else { delete e.dataset.s; delete r.dataset.s; }
   const 그림 = 상태 === 'done' ? 'ok' : 상태 === 'stop' ? 'stop' : '';
@@ -63,7 +63,7 @@ function 마당(n, 상태, 꼬리) {
 
 function 펼침(n) { 현재 = n; 레일칠(); }
 function 레일칠() {
-  마당들.forEach((_, n) => $('r' + n).setAttribute(
+  마당들.forEach((_, n) => $('nav_' + n).setAttribute(
     'aria-current', n === 현재 ? 'step' : 'false'));
 }
 function 가마당(n) {
@@ -236,17 +236,20 @@ function 그리기3() {
     + `<div class="row"><button class="p" onclick="만들기()">
         ${아이콘('build')} 서류 만들기</button>
        <button onclick="폴더()">${아이콘('folder')} 만든 것 열어보기</button></div>`
-    + '<div id="r3" style="margin-top:16px"></div>'
+    + '<div id="만든것" style="margin-top:16px"></div>'
     + 다음단추(4, '비용 확인으로');
   마당(3, c.준비서 ? 'done' : '', c.준비서 ? '만들어 두었습니다' : '아직');
 }
 async function 만들기() {
-  $('r3').innerHTML = '<div class="empty"><span class="spin"></span>'
+  $('만든것').innerHTML = '<div class="empty"><span class="spin"></span>'
     + '만드는 중입니다. 조금 걸립니다</div>';
   const r = await api('/api/build', { i: 고른 });
   건들[고른] = r.건;
-  $('r3').innerHTML = (r.줄 || []).map(x =>
-    알림(x.ok ? 'ok' : 'bad', 안전(x.글))).join('');
+  $('만든것').innerHTML = (r.줄 || []).map(x => 알림(x.ok ? 'ok' : 'bad', 안전(x.글),
+    x.ok || !x.원문 ? '' : `<span class="src">${안전(x.원문)}</span>`)).join('')
+    + (r.성함 ? '' : 알림('warn', '이것부터 고쳐야 서류가 나옵니다',
+      `<button class="p sm" onclick="가마당(2)" style="margin-top:6px">
+        2 원고 검사로 가서 고치기 ${아이콘('next')}</button>`));
   마당(3, r.성함 ? 'done' : 'stop', r.성함 ? '다 만들었습니다' : '막혔습니다');
   그리기4(); 그리기5(); 검사하기(); 띠();
 }
@@ -339,7 +342,7 @@ function 그리기6() {
       원고 폴더에 넣지 않으므로 배포 묶음을 남에게 보내도 따라가지 않습니다.</p>
       </div></div>`;
   }
-  h += '<div id="tr">' + 기한만(c) + '</div>';
+  h += '<div id="진행">' + 기한만(c) + '</div>';
   마당(6, c.출원번호 ? 'done' : '', c.출원번호 ? '출원번호 있음' : '기한 3가지');
   $('b6').innerHTML = h;
 }
@@ -373,7 +376,7 @@ async function 추적() {
   $('tm').textContent = '';
   if (r.잘못 === '열쇠없음') { 열쇠있음 = false; 그리기6(); return; }
   if (r.잘못) {
-    $('tr').innerHTML = 알림('bad', '부르지 못했습니다', 안전(r.잘못)) + 기한만(건들[고른]);
+    $('진행').innerHTML = 알림('bad', '부르지 못했습니다', 안전(r.잘못)) + 기한만(건들[고른]);
     return;
   }
   await api('/api/fill', { i: 고른, 값: { 'filing.application_number': 번호 } });
@@ -400,7 +403,7 @@ async function 추적() {
         <div class="src">${안전(k.근거)}</div></td></tr>`;
     }).join(''));
   h += `<p class="src">KIPRIS 에서 ${안전(r.받은때)} 에 받았습니다.</p>`;
-  $('tr').innerHTML = h;
+  $('진행').innerHTML = h;
   마당(6, 'done', 안전(r.법적상태 || '조회함'));
 }
 

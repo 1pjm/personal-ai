@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """출원 도우미 자체 점검.  python test_출원도우미.py"""
-import json, sys, tempfile
+import json, re, sys, tempfile
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import 출원도우미 as D
@@ -49,7 +49,20 @@ def main() -> int:
         낸 = D.사전등록점검({"applicants": [{"customer_no": "4-2020-123456-7"}]})
         assert 낸[0][1] is True
 
-    print(f"자체 점검 통과 — 감면율 6가지 · 수수료 4가지 · 사전등록 2가지")
+    # 화면의 id 가 겹치지 아니하는가.
+    # 레일 단추를 id="nav_${n}" 로 찍는데 서류 결과 칸도 id="r3" 이라 겹친 적이 있다.
+    # getElementById 가 헤더의 단추를 먼저 집어 결과를 거기다 그렸고, 화면이 겹쳐 보였다.
+    # 「찍어 내는 id」 와 「박아 둔 id」 가 같은 자리를 가리키면 잡는다.
+    자리 = Path(__file__).resolve().parent
+    글 = ((자리 / "화면.js").read_text(encoding="utf-8")
+         + (자리 / "화면.html").read_text(encoding="utf-8"))
+    찍는앞 = set(re.findall(r'id="([A-Za-z_]+)\$\{', 글))       # id="b${n}" → b
+    박은것 = set(re.findall(r'id="([^"$]+)"', 글))                # id="r3"    → r3
+    겹침 = sorted(f for f in 박은것 for a in 찍는앞
+                 if f.startswith(a) and f[len(a):].isdigit())
+    assert not 겹침, f"id 가 겹친다 — 찍는 앞머리 {sorted(찍는앞)} 와 박은 id {겹침}"
+
+    print(f"자체 점검 통과 — 감면율 6가지 · 수수료 4가지 · 사전등록 2가지 · 화면 id 겹침 없음")
     return 0
 
 
