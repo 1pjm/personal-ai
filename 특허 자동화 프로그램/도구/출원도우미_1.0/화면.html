@@ -32,6 +32,9 @@
   --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);
 }}
 *{box-sizing:border-box}
+/* .btn 처럼 display 를 준 것에도 hidden 이 먹게 한다.
+   먹지 아니하면 아직 갈 곳이 없는 단추가 보인다 */
+[hidden]{display:none!important}
 html{scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
@@ -257,9 +260,10 @@ button.접기 svg{transition:transform .2s}
     <div class="hd">
       <h1><svg class="i"><use href="#i-doc"/></svg>특허 출원 안내</h1>
       <div class="row">
-        <a class="btn sm" id="보드길" href="#" target="_blank" rel="noopener"
-           hidden>전문가용 메인보드
-          <svg class="i" aria-hidden="true"><use href="#i-out"/></svg></a>
+        <button class="sm" id="보드길" onclick="보드열기()" hidden>
+          <svg class="i" aria-hidden="true"><use href="#i-board"/></svg>
+          <span id="보드글">전문가용 메인보드</span>
+          <svg class="i" aria-hidden="true"><use href="#i-out"/></svg></button>
         <span class="ver" id="ver">준비 중</span>
       </div>
     </div>

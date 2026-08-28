@@ -125,8 +125,7 @@ function 날수(iso) {
 /* ── 0. 어느 특허를 낼까요 ─────────────────────────── */
 function 그리기0(r) {
   보드 = r.보드 !== undefined ? (r.보드 || '') : 보드;
-  const 길 = $('보드길');
-  if (보드) { 길.href = 보드; 길.hidden = false; } else 길.hidden = true;
+  $('보드길').hidden = false;   // 주소는 누를 때 받는다. 미리 없어도 보인다
   if (r.열쇠 !== undefined) 열쇠있음 = r.열쇠;
   건들 = r.건들 || []; 고른 = null;
   const 최근 = (r.최근 || []).filter(x => x !== r.폴더);
@@ -234,13 +233,13 @@ async function 검사하기() {
       + `<div class="row"><button class="p" onclick="채우기()">저장하고 다시 검사</button>
          <span id="fm" style="color:var(--go);font-weight:600"></span></div>`;
   }
-  if (보드) {
+  {
     h += `<div class="note warn" style="margin-top:20px">${아이콘('board')}<div>
       <b>더 자세히 손보려면</b>
       <p>청구항 대비, 단락번호 다시 매기기, 선행기술 조사까지 다루는
       전문가용 화면이 따로 있습니다. 표제 오른쪽에서도 언제든 열 수 있습니다.</p>
-      <a class="btn sm" href="${보드}" target="_blank" rel="noopener"
-        style="margin-top:8px">특허킷 메인보드 열기 ${아이콘('out')}</a></div></div>`;
+      <button class="sm" onclick="보드열기()" style="margin-top:8px">
+        특허킷 메인보드 열기 ${아이콘('out')}</button></div></div>`;
   }
   h += 다음단추(3, '서류 만들기로');
   마당(2, r.성함 ? 'done' : 'stop', r.성함 ? '지났습니다' : `${r.오류.length}가지 고쳐야 함`);
@@ -388,6 +387,25 @@ function 기한만(c) {
       <tr><th>3년 안</th><td><b>심사청구</b>
         <div class="sub">안 하면 취하한 것으로 봅니다.</div>
         <div class="src">특허법 제59조제2항</div></td></tr>`);
+}
+
+/* 메인보드 열기 — 누를 때 주소를 받아 연다.
+   미리 href 에 박아 두면 아직 안 뜬 사이에 누른 사람이 지금 쪽을 다시 열게 된다 */
+async function 보드열기() {
+  const 글 = $('보드글');
+  const 본디 = 글 ? 글.textContent : '';
+  if (글) 글.textContent = '메인보드를 여는 중…';
+  $('보드길').disabled = true;
+  try {
+    const r = await api('/api/board');
+    보드 = r.보드 || '';
+    if (보드) window.open(보드, '_blank', 'noopener');
+    else alert('메인보드를 띄우지 못했습니다.\n'
+      + '특허킷이 깔려 있는지 보세요 — 검은 창에 pip install patentkit');
+  } finally {
+    if (글) 글.textContent = 본디;
+    $('보드길').disabled = false;
+  }
 }
 
 async function 열쇠넣기() {

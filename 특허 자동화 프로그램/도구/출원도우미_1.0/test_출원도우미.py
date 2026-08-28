@@ -74,6 +74,16 @@ def main() -> int:
     # 표제의 메인보드 단추가 살아 있는가
     assert 'id="보드길"' in html and "보드길" in js, "메인보드로 가는 길이 없다"
 
+    # target="_blank" 인 링크가 빈 주소를 물고 있지 아니한가.
+    # href="#" 에 target=_blank 를 걸면 지금 쪽이 새 탭에 다시 열린다.
+    # 메인보드 단추가 실제로 그랬다.
+    죽은길 = re.findall(r'<a[^>]*href="(#|)"[^>]*target="_blank"', 글)         + re.findall(r'<a[^>]*target="_blank"[^>]*href="(#|)"', 글)
+    assert not 죽은길, "빈 주소에 target=_blank 가 걸려 있다 — 제 쪽이 새 탭에 열린다"
+
+    # hidden 이 실제로 먹는가. .btn 처럼 display 를 준 것은 UA 의
+    # [hidden]{display:none} 를 이겨서, 감춘 줄 알았던 단추가 보인다.
+    assert "[hidden]{display:none!important}" in html.replace(" ", ""),         "hidden 을 눌러 주는 규칙이 없다"
+
     print(f"자체 점검 통과 — 감면율 6가지 · 수수료 4가지 · 사전등록 2가지 · 화면 id 겹침 없음 · 요약 여백·메인보드 길")
     return 0
 

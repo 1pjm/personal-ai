@@ -15,9 +15,11 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import threading
+import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -252,6 +254,8 @@ class 처리기(BaseHTTPRequestHandler):
             if len(번호) < 10:
                 return self.보냄({"잘못": "출원번호는 숫자 13자리입니다 (예 1020260142020)"})
             return self.보냄(진행받기(번호))
+        if 길.path == "/api/board":
+            return self.보냄({"보드": 보드받기()})
         if 길.path == "/api/pick":
             return self.보냄({"폴더": 폴더고르기(물.get("dir", [str(뿌리)])[0])})
         if 길.path == "/api/check":
@@ -324,6 +328,30 @@ class 처리기(BaseHTTPRequestHandler):
                              else ["open", str(낼)])
             return self.보냄({"열림": True})
         self.send_error(404)
+
+
+def 살아있나(주소: str) -> bool:
+    """붙어 보고 살았는지 본다. 주소만 들고 있다가 죽은 것을 내줄 수 있다."""
+    m = re.search(r"127\.0\.0\.1:(\d+)", 주소 or "")
+    if not m:
+        return False
+    with socket.socket() as ㅅ:
+        ㅅ.settimeout(0.6)
+        return ㅅ.connect_ex(("127.0.0.1", int(m.group(1)))) == 0
+
+
+def 보드받기() -> str:
+    """단추를 누른 때에 주소를 준다. 아직이면 기다리고, 죽었으면 다시 띄운다."""
+    global 보드주소
+    for _ in range(30):                      # 뜨는 중일 수 있다
+        if 보드주소:
+            break
+        time.sleep(0.4)
+    if 보드주소 and 살아있나(보드주소):
+        return 보드주소
+    보드주소 = ""
+    보드띄우기(뿌리)
+    return 보드주소 if 살아있나(보드주소) else ""
 
 
 def 보드띄우기(폴더: Path) -> None:
