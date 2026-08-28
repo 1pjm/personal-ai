@@ -12,7 +12,9 @@
 from __future__ import annotations
 
 import datetime as dt
+import os
 import re
+import subprocess
 import shutil
 import sys
 import zipfile
@@ -142,6 +144,25 @@ def 만들기() -> int:
                                or re.search(r"명세서|청구범위|제출본", f.name))]
     if 샌것:
         raise SystemExit(f"★원고가 섞였다★ {[str(x) for x in 샌것]}")
+
+    # 묶기 전에 자체 점검을 돌린다. 깨진 것을 남에게 보내지 아니한다
+    r = subprocess.run([sys.executable, str(터 / "출원도우미" / "test_출원도우미.py")],
+                       capture_output=True, text=True, encoding="utf-8",
+                       errors="replace", env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+    if r.returncode != 0:
+        raise SystemExit("자체 점검이 떨어졌다. 묶지 아니한다.\n"
+                         + (r.stdout or "") + (r.stderr or ""))
+    print("  자체 점검 통과")
+
+    # 넣은 것이 지금 소스와 같은가. 낡은 것을 보내는 일이 없게 한다
+    for 안 in sorted((터).rglob("*")):
+        if not 안.is_file() or 안.suffix not in (".py", ".js", ".html", ".bat"):
+            continue
+        상대 = 안.relative_to(터)
+        밖 = (도구 / "출원도우미_1.0" / 상대.name if 상대.parts[0] == "출원도우미"
+             else 도구 / 상대)
+        if 밖.exists() and 밖.read_bytes() != 안.read_bytes():
+            raise SystemExit(f"묶음이 소스와 다르다 — {상대}")
 
     묶음 = shutil.make_archive(str(낼곳 / 이름), "zip", str(낼곳), 이름)
     잰것 = zipfile.ZipFile(묶음)
