@@ -32,21 +32,40 @@ import 출원도우미 as D
 적바림 = Path.home() / ".patentkit-helper.json"   # ASCII 이름. 한글은 탈이 잦다
 
 
-def 최근읽기() -> list[str]:
+def 적바림읽기() -> dict:
     try:
-        낸 = json.loads(적바림.read_text(encoding="utf-8")).get("최근") or []
+        return json.loads(적바림.read_text(encoding="utf-8"))
     except Exception:
-        return []
-    return [x for x in 낸 if Path(x).is_dir()][:8]
+        return {}
+
+
+def 적바림쓰기(**바꿈) -> None:
+    낸 = 적바림읽기()
+    낸.update(바꿈)
+    try:
+        적바림.write_text(json.dumps(낸, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def 열쇠올리기() -> bool:
+    """적바림의 KIPRIS 열쇠를 환경변수로 올린다.
+
+    열쇠를 patent_config.json 에 두지 아니한다. 그 파일은 배포 묶음에 실려
+    사외로 나간다. 적바림은 사용자 집 폴더에 있고 어디로도 따라가지 아니한다.
+    """
+    열쇠 = (적바림읽기().get("열쇠") or "").strip()
+    if 열쇠 and not os.environ.get("KIPRIS_KEY"):
+        os.environ["KIPRIS_KEY"] = 열쇠
+    return bool(os.environ.get("KIPRIS_KEY"))
+
+
+def 최근읽기() -> list[str]:
+    return [x for x in (적바림읽기().get("최근") or []) if Path(x).is_dir()][:8]
 
 
 def 최근적기(폴더: Path) -> None:
-    낸 = [str(폴더)] + [x for x in 최근읽기() if x != str(폴더)]
-    try:
-        적바림.write_text(json.dumps({"최근": 낸[:8]}, ensure_ascii=False, indent=2),
-                        encoding="utf-8")
-    except OSError:
-        pass
+    적바림쓰기(최근=([str(폴더)] + [x for x in 최근읽기() if x != str(폴더)])[:8])
 
 
 def 폴더고르기(처음: str) -> str:
@@ -97,6 +116,7 @@ def 한건(건: Path) -> dict:
                    for n, 됨, 값, 근거, 자리 in D.사전등록점검(cfg)],
         "수수료": D.수수료셈(건, cfg),
         "준비서": (건 / "_출력" / "출원_준비.md").exists(),
+        "출원번호": (출원.get("application_number") or ""),
     }
 
 
@@ -126,6 +146,54 @@ def 풀이(줄: str) -> dict:
         if re.search(무늬, 줄):
             return {"원문": 줄, "뜻": 뜻, "방법": 방법}
     return {"원문": 줄, "뜻": "형식이 관청 기준과 다릅니다", "방법": "메인보드에서 자세히 봅니다."}
+
+
+# ─────────────────────────────────────────────── 진행 상황
+
+기한표 = [
+    (30, "공지예외 증명서류", "특허법 제30조제2항",
+     "발명을 미리 공개한 적이 있으면 이것을 내야 그 공개가 없던 것으로 다뤄집니다. "
+     "넘기면 되돌릴 수 없습니다."),
+    (365, "정식 명세서로 바꾸기", "특허법 제42조의2제2항",
+     "임시명세서(가출원)로 냈다면 1년 안에 정식 명세서를 내야 합니다."),
+    (365 * 3, "심사청구", "특허법 제59조제2항",
+     "3년 안에 청구하지 아니하면 취하한 것으로 봅니다."),
+]
+
+
+def 진행받기(번호: str) -> dict:
+    """출원번호로 관청 서지를 받고 기한을 셈한다."""
+    import datetime as dt
+    from patentkit import kipris as K
+    if not 열쇠올리기():
+        return {"잘못": "열쇠없음"}
+    try:
+        r = K.상세받기(번호, K.열쇠찾기())
+    except Exception as e:
+        return {"잘못": f"{type(e).__name__}: {e}"}
+
+    오늘 = dt.date.today()
+    기한 = []
+    try:
+        출원일 = dt.date.fromisoformat(r.get("출원일") or "")
+    except ValueError:
+        출원일 = None
+    for 날수, 이름, 근거, 풀이 in 기한표:
+        칸 = {"이름": 이름, "근거": 근거, "풀이": 풀이, "날": "", "남음": None}
+        if 출원일:
+            그날 = 출원일 + dt.timedelta(days=날수)
+            칸["날"] = 그날.isoformat()
+            칸["남음"] = (그날 - 오늘).days
+        기한.append(칸)
+
+    return {
+        "명칭": r.get("명칭", ""), "출원번호": r.get("출원번호", ""),
+        "출원일": r.get("출원일", ""), "공개번호": r.get("공개번호", ""),
+        "공개일": r.get("공개일", ""), "등록번호": r.get("등록번호", ""),
+        "등록일": r.get("등록일", ""), "법적상태": r.get("법적상태", ""),
+        "청구항수": r.get("청구항수", 0), "받은때": r.get("받은때", ""),
+        "기한": 기한,
+    }
 
 
 # ─────────────────────────────────────────────── 화면
@@ -268,7 +336,7 @@ pre{background:var(--paper);border:1px solid var(--rule2);padding:11px;overflow-
   <details class="step" id="s5"><summary><span class="no">5</span>특허로에 내기<span class="tag" id="t5">—</span></summary>
     <div class="body" id="b5"></div></details>
 
-  <details class="step" id="s6"><summary><span class="no">6</span>낸 뒤에 할 일<span class="tag" id="t6">—</span></summary>
+  <details class="step" id="s6"><summary><span class="no">6</span>낸 뒤 — 진행 상황<span class="tag" id="t6">—</span></summary>
     <div class="body" id="b6"></div></details>
 </main>
 
@@ -295,6 +363,7 @@ function 마당(n,상태,꼬리){
 
 function 그리기0(r){
   보드 = r.보드!==undefined ? (r.보드||'') : 보드;
+  if(r.열쇠!==undefined) 열쇠있음=r.열쇠;
   if(r.폴더) $('dir').value=r.폴더;
   건들 = r.건들||[];
   고른 = null;
@@ -469,19 +538,92 @@ function 베끼기(){
     setTimeout(()=>$('cp').textContent='',2500);});
 }
 
-/* 6 — 뒤에 할 일 */
+/* 6 — 낸 뒤 진행 상황 */
+let 열쇠있음=false;
+
 function 그리기6(){
   const c=건들[고른];
-  $('b6').innerHTML='<p class="hint">출원번호를 받은 뒤에 놓치면 안 되는 기한입니다.</p>'
-    +표(`<tr><th>30일 안</th><td><b>공지예외 증명서류</b>를 냅니다.
-        발명을 미리 공개한 적이 있다면 이걸 내야 그 공개가 없던 것으로 취급됩니다(특허법 제30조제2항).
-        <b>넘기면 되돌릴 수 없습니다.</b></td></tr>
-      <tr><th>1년 안</th><td>임시명세서(가출원)로 냈다면 <b>정식 명세서</b>로 바꿔야 합니다.
-        ${c.마감?'지금 건의 마감은 <b>'+c.마감+'</b> 입니다.':''}</td></tr>
-      <tr><th>3년 안</th><td><b>심사청구</b>를 합니다. 안 하면 취하된 것으로 봅니다.</td></tr>`)
-    +'<p class="hint">진행 상황은 출원번호로 볼 수 있습니다.</p>'
-    +'<pre>python 출원도우미.py 추적 &lt;출원번호&gt;</pre>';
-  마당(6,'','기한 3가지');
+  let h='<p class="hint">출원번호를 받으셨으면 여기에 넣으세요. '
+   +'관청 기록을 불러와 지금 어디까지 갔는지와 남은 기한을 보여 줍니다.</p>'
+   +'<div class="row" style="margin-bottom:12px">'
+   +`<input type="text" id="ano" value="${안전(c.출원번호||'')}" placeholder="예 1020260142020"
+      style="font:14px var(--mono);padding:8px 10px;width:190px;
+        border:1px solid var(--rule);background:var(--paper);color:var(--ink)">`
+   +'<button class="p" onclick="추적()">조회</button>'
+   +'<span id="tm" style="color:var(--ink2)"></span></div>';
+  if(!열쇠있음){
+    h+='<div class="note warn"><b>KIPRIS 열쇠가 없습니다.</b>'
+     +'<p>관청 기록을 부르려면 열쇠가 필요합니다. '
+     +'<a href="https://plus.kipris.or.kr" target="_blank" rel="noopener">plus.kipris.or.kr</a> '
+     +'에서 무료로 받습니다. 아래에 한 번만 넣어 두면 계속 씁니다.</p>'
+     +'<div class="row" style="margin-top:8px">'
+     +'<input type="password" id="kkey" placeholder="KIPRIS 인증키"'
+     +' style="font:13px var(--mono);padding:7px 9px;width:270px;'
+     +'border:1px solid var(--rule);background:var(--paper);color:var(--ink)">'
+     +'<button onclick="열쇠넣기()">저장</button></div>'
+     +'<p style="font-size:12px;color:var(--faint);margin-top:6px">'
+     +'열쇠는 이 컴퓨터의 집 폴더에만 둡니다. 원고 폴더에 넣지 않으므로 '
+     +'배포 묶음을 남에게 보내도 따라가지 않습니다.</p></div>';
+  }
+  h+='<div id="tr">'+기한만(c)+'</div>';
+  마당(6, c.출원번호?'done':'', c.출원번호?'출원번호 있음':'기한 3가지');
+  $('b6').innerHTML=h;
+}
+
+/* 아직 안 냈을 때 — 기한이 무엇인지만 알려 준다 */
+function 기한만(c){
+  return '<p class="hint">출원한 뒤 놓치면 안 되는 기한입니다.</p>'
+   +표(`<tr><th>30일 안</th><td><b>공지예외 증명서류</b> — 발명을 미리 공개한 적이 있으면
+      이것을 내야 그 공개가 없던 것으로 다뤄집니다(특허법 제30조제2항).
+      <b>넘기면 되돌릴 수 없습니다.</b></td></tr>
+     <tr><th>1년 안</th><td><b>정식 명세서</b>로 바꿉니다(특허법 제42조의2제2항).
+      ${c.마감?'지금 건의 마감은 <b>'+안전(c.마감)+'</b> 입니다.':''}</td></tr>
+     <tr><th>3년 안</th><td><b>심사청구</b>를 합니다. 안 하면 취하한 것으로 봅니다(특허법 제59조제2항).</td></tr>`);
+}
+
+async function 열쇠넣기(){
+  const r=await api('/api/key',{열쇠:$('kkey').value});
+  열쇠있음=r.있음; 그리기6();
+  if(열쇠있음) 추적();
+}
+
+async function 추적(){
+  const 번호=$('ano').value.trim();
+  if(!번호){ $('tm').textContent='출원번호를 넣으세요'; return; }
+  $('tm').innerHTML='<span class="spin"></span>관청 기록을 부르는 중';
+  const r=await api('/api/track?no='+encodeURIComponent(번호));
+  $('tm').textContent='';
+  if(r.잘못==='열쇠없음'){ 열쇠있음=false; 그리기6(); return; }
+  if(r.잘못){ $('tr').innerHTML='<div class="note bad"><b>부르지 못했습니다.</b><p>'
+    +안전(r.잘못)+'</p></div>'+기한만(건들[고른]); return; }
+
+  /* 받은 번호를 설정에 적어 둔다. 다음에 열면 그대로 뜬다 */
+  await api('/api/fill',{i:고른, 값:{'filing.application_number':번호}});
+  건들[고른].출원번호=번호;
+
+  const 걸음=[['출원',r.출원일],['공개',r.공개일],['등록',r.등록일]];
+  let h='<div class="note ok"><b>'+안전(r.명칭)+'</b>'
+   +'<p>지금 상태 — <b>'+안전(r.법적상태||'확인 필요')+'</b></p></div>'
+   +표(`<tr><th>출원번호</th><td>${안전(r.출원번호)}</td></tr>
+     ${걸음.filter(x=>x[1]).map(([이름,날])=>
+       `<tr><th>${이름}</th><td>${안전(날)}</td></tr>`).join('')}
+     ${r.공개번호?`<tr><th>공개번호</th><td>${안전(r.공개번호)}</td></tr>`:''}
+     ${r.등록번호?`<tr><th>등록번호</th><td>${안전(r.등록번호)}</td></tr>`:''}
+     <tr><th>청구항</th><td>${r.청구항수}항</td></tr>`);
+
+  h+='<p class="hint">출원일부터 세는 기한입니다.</p>'
+   +표(r.기한.map(k=>{
+     const 급 = k.남음===null ? '' : k.남음<0 ? 'bad' : k.남음<30 ? 'warn' : '';
+     const 남 = k.남음===null ? '출원일을 몰라 셈하지 못했습니다'
+       : k.남음<0 ? `<b style="color:var(--seal)">${-k.남음}일 지났습니다</b>`
+       : `<b>D-${k.남음}</b>`;
+     return `<tr class="${급}"><th>${안전(k.이름)}</th><td>${안전(k.날)} · ${남}
+       <div style="color:var(--ink2);font-size:13px;margin-top:3px">${안전(k.풀이)}</div>
+       <div style="color:var(--faint);font-size:12px">${안전(k.근거)}</div></td></tr>`;
+   }).join(''));
+  h+=`<p class="hint" style="font-size:12px">KIPRIS Plus 에서 ${안전(r.받은때)} 에 받았습니다.</p>`;
+  $('tr').innerHTML=h;
+  마당(6,'done',안전(r.법적상태||'조회함'));
 }
 </script></body></html>
 """
@@ -509,9 +651,14 @@ class 처리기(BaseHTTPRequestHandler):
         if 길.path in ("/", "/index.html"):
             return self.보냄(화면, "text/html")
         if 길.path == "/api/start":
-            return self.보냄({"버전": D.버전, "보드": 보드주소,
+            return self.보냄({"버전": D.버전, "보드": 보드주소, "열쇠": 열쇠올리기(),
                             "폴더": str(뿌리), "최근": 최근읽기(),
                             "건들": [한건(g) for g in 출원건들()]})
+        if 길.path == "/api/track":
+            번호 = re.sub(r"[^0-9]", "", 물.get("no", [""])[0])
+            if len(번호) < 10:
+                return self.보냄({"잘못": "출원번호는 숫자 13자리입니다 (예 1020260142020)"})
+            return self.보냄(진행받기(번호))
         if 길.path == "/api/pick":
             return self.보냄({"폴더": 폴더고르기(물.get("dir", [str(뿌리)])[0])})
         if 길.path == "/api/check":
@@ -542,6 +689,10 @@ class 처리기(BaseHTTPRequestHandler):
                     break
             D.준비(건, False)
             return self.보냄({"성함": 성함, "줄": 줄, "건": 한건(건)})
+        if self.path == "/api/key":
+            적바림쓰기(열쇠=(몸.get("열쇠") or "").strip())
+            os.environ.pop("KIPRIS_KEY", None)
+            return self.보냄({"있음": 열쇠올리기()})
         if self.path == "/api/chdir":
             새 = Path(몸.get("폴더", "")).expanduser()
             if not 새.is_dir():
