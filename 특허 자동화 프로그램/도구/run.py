@@ -13,12 +13,9 @@ from pathlib import Path
 r = subprocess.run([sys.executable, "-m", "patentkit", "--version"],
                    capture_output=True)
 if r.returncode != 0:
-    바퀴 = next((도구 / "특허킷_2.7.0" / "원본" / "wheels").glob("patentkit-*.whl"), None)
+    바퀴 = next(도구.glob("*특허킷*/원본/wheels/patentkit-*.whl"), None)
     if 바퀴:
         print("특허킷을 깝니다…")
         subprocess.run([sys.executable, "-m", "pip", "install", "--quiet", str(바퀴)])
 
-sys.exit(subprocess.run([sys.executable, str(도구 / "출원도우미_1.0" / "출원도우미.py"),
-                         "준비", str(뿌리 / "원고"),
-                         *(["--열기"] if os.environ.get("PATENTKIT_OPEN") else []),
-                         *sys.argv[1:]]).returncode)
+sys.exit(subprocess.run([sys.executable, str(도구 / "출원도우미_1.0" / "화면.py"), str(뿌리 / "원고"), *sys.argv[1:]]).returncode)
