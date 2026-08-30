@@ -1,0 +1,101 @@
+{
+  "_README": "출원건 폴더마다 이 파일을 채운다. ★ 표시가 남아 있으면 킷이 관청 서식 생성을 차단한다.",
+  "invention": {
+    "title_kr": "복약 시간 놓침 감지를 수행하는 장치, 그 방법 및 이를 기록한 컴퓨터 판독 가능 기록매체",
+    "title_en": "",
+    "tech_field": "",
+    "related_project": null
+  },
+  "applicants": [
+    {
+      "name": "퍼스널에이아이 주식회사",
+      "biz_no": "★사업자등록번호 확인 필요",
+      "customer_no": "★특허고객번호 확인 필요",
+      "type": "주출원",
+      "status": "확정"
+    }
+  ],
+  "inventors": [
+    {
+      "name": "★발명자 확정 필요",
+      "org": "퍼스널에이아이㈜",
+      "position": "",
+      "share_pct": 100,
+      "is_representative": true,
+      "contact": ""
+    }
+  ],
+  "ipc": [],
+  "filing": {
+    "kind": "임시명세서(가출원)",
+    "fee_reduction": "중소기업 70% 감경 (특허료 등의 징수규칙 별표 5)",
+    "disclosure_exception": {
+      "claimed": false,
+      "date": "",
+      "medium": ""
+    },
+    "priority_deadline": ""
+  },
+  "paths": {
+    "base_dir": "C:\\Users\\Personal AI\\AppData\\Local\\Temp\\claude\\C--Users-Personal-AI-Desktop-personalai-seyeon\\97f116e0-5449-45dd-969f-cda7edfa6178\\scratchpad\\문서시작검증\\출원건_01_아이디어메모",
+    "spec_md": "01_명세서.md",
+    "claims_md": "02_청구범위.md",
+    "submission_md": "03_제출본_명세서_청구범위.md",
+    "drawings_dir": "도면",
+    "out_dir": "_출력"
+  },
+  "style": {
+    "font_kr": "바탕",
+    "font_code": "Consolas",
+    "heading_sizes": {
+      "1": 16,
+      "2": 14,
+      "3": 12,
+      "4": 11,
+      "5": 11,
+      "6": 11
+    },
+    "body_size": 11,
+    "table_style": "Light Grid Accent 1",
+    "template_docx": ""
+  },
+  "output": {
+    "filename_pattern": "임시명세서_{date}.docx"
+  },
+  "cover": {
+    "recipient": "특허청"
+  },
+  "build": {
+    "internal_sections": [
+      "회피 논거"
+    ]
+  },
+  "prior_art": {
+    "queries": [],
+    "countries": [
+      "KR",
+      "US"
+    ],
+    "max_results": 10,
+    "kipris_key": "",
+    "endpoint": "",
+    "ops_key": "",
+    "ops_secret": "",
+    "patentsview_key": ""
+  },
+  "trace": {
+    "source_root": ""
+  },
+  "compare": {
+    "terms": []
+  },
+  "evidence": {
+    "urls": []
+  },
+  "validation": {
+    "strict": true,
+    "style_checks": true,
+    "min_claims": 1,
+    "forbidden_in_independent_claims": []
+  }
+}

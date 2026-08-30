@@ -137,6 +137,7 @@ def 만들기() -> int:
         안내글.format(판=판, 날=날.isoformat()), encoding="utf-8")
     (터 / "원고" / "여기에 특허 원고를 넣으세요.txt").write_text(원고안내, encoding="utf-8")
     shutil.copy(뿌리 / "버전기록" / "변경내역.md", 터 / "변경내역.md")
+    shutil.copy(뿌리 / "기능문서.md", 터 / "기능문서.md")
 
     # 원고나 산출물이 섞여 들어가지 아니하였는가
     샌것 = [f for f in 터.rglob("*")
