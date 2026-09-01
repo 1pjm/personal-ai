@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "fetchsandbox": {
+      "command": "npx",
+      "args": ["-y", "fetchsandbox-mcp@latest"]
+    },
+    "keenable": {
+      "command": "npx",
+      "args": ["-y", "@keenable/mcp"]
+    }
+  }
+}
